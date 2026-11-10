@@ -28,7 +28,7 @@ class TestFeatureFlags(FeatureCase):
     def test_flags_helper(self):
         off = {"costs": False, "openspec": False}
         self.assertEqual(cc.feature_flags({}), off)  # empty / missing / corrupt sidecar: opt-in required
-        self.assertEqual(cc.feature_flags({"url": URL}), {"costs": True, "openspec": True})  # sidecar without features key
+        self.assertEqual(cc.feature_flags({"url": URL}), off)  # no features object: opt-in required
         self.assertEqual(cc.feature_flags({"url": URL, "features": "junk"}), off)
         self.assertEqual(cc.feature_flags({"token": "t"}), off)
         self.assertEqual(cc.feature_flags({"features": {"costs": True, "openspec": False}}),
@@ -38,12 +38,12 @@ class TestFeatureFlags(FeatureCase):
         self.assertEqual(cc.feature_flags({"features": "junk"}), off)
         self.assertEqual(cc.feature_flags(None), off)
 
-    def test_legacy_sidecar_means_both_enabled(self):
+    def test_sidecar_without_features_means_both_disabled(self):
         self.write_side({"url": URL, "token": "t", "version": "1.0.0", "managed_keys": sorted(cc.MANAGED_ENV_KEYS)})
-        self.assertEqual(cc.feature_flags(cc.read_sidecar()), {"costs": True, "openspec": True})
+        self.assertEqual(cc.feature_flags(cc.read_sidecar()), {"costs": False, "openspec": False})
         rc, out, _ = self.run_cli(["status"])
-        self.assertIn("traces: enabled", out)
-        self.assertIn("openspec: enabled", out)
+        self.assertNotIn("traces: enabled", out)
+        self.assertNotIn("openspec: enabled", out)
 
     def test_setup_leaves_features_off(self):
         tok = self.setup_only()
@@ -86,7 +86,12 @@ class TestFeatureFlags(FeatureCase):
         self.assertEqual(self.side()["features"], {"costs": False, "openspec": True})
         self.assertFalse(os.path.exists(self.settings))
 
-    def test_setup_over_legacy_sidecar_keeps_both_on(self):
+    def test_fresh_setup_writes_both_features_off(self):
+        self.write_settings({})
+        self.setup_only()
+        self.assertEqual(self.side()["features"], {"costs": False, "openspec": False})
+
+    def test_setup_over_sidecar_without_features_writes_both_off(self):
         self.write_settings({})
         self.setup_only()
         self.costs("on")
@@ -94,7 +99,7 @@ class TestFeatureFlags(FeatureCase):
         del sc["features"]
         self.write_side(sc)  # sidecar without features key
         self.setup_only(token="tok-two")
-        self.assertEqual(self.side()["features"], {"costs": True, "openspec": True})
+        self.assertEqual(self.side()["features"], {"costs": False, "openspec": False})
 
 
 class TestSendTraces(FeatureCase):

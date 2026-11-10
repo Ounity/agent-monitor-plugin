@@ -96,9 +96,9 @@ class TestF3NoImplicitOptIn(R3Case):
             f.write("{nope")
         self.assertEqual(cc.feature_flags(cc.read_sidecar()), {"costs": False, "openspec": False})
 
-    def test_legacy_sidecar_is_on(self):
+    def test_sidecar_without_features_is_off(self):
         self.write_side({"url": URL, "token": "t", "version": "1.0.0"})
-        self.assertEqual(cc.feature_flags(cc.read_sidecar()), {"costs": True, "openspec": True})
+        self.assertEqual(cc.feature_flags(cc.read_sidecar()), {"costs": False, "openspec": False})
 
     def test_non_dict_features_is_off(self):
         self.assertEqual(cc.feature_flags({"url": URL, "features": []}), {"costs": False, "openspec": False})

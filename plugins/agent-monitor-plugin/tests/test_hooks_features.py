@@ -135,15 +135,15 @@ class TestGatingMatrix(GateCase):
                 self.assertIn("change_source", r["body"])
         self.assertEqual(self.server.requests[-1]["body"]["change_name"], "foo")
 
-    def test_legacy_sidecar_without_features_runs_everything(self):
+    def test_sidecar_without_features_sends_nothing(self):
         self.populate()
         self.recording_shim()
         with open(os.path.join(self.cfg, "settings.agent-monitor-plugin.json"), "w") as f:
             json.dump({"version": "1.0.0", "url": self.server.url}, f)
         self.run_session()
         self.settle()
-        self.assertIn("prompt", self.server.paths())
-        self.assertIn("sync/plan", self.server.paths())
+        self.assertEqual(self.server.requests, [])
+        self.assertEqual(self.openspec_calls(), 0)
 
     def test_env_only_config_without_sidecar_sends_nothing(self):
         # plugin-option-only users have no sidecar: no opt-in, so no feature is on
@@ -162,12 +162,12 @@ class TestGatingMatrix(GateCase):
         self.settle()
         self.assertEqual(self.server.requests, [])
 
-    def test_legacy_0_1_0_sidecar_runs_everything(self):
+    def test_sidecar_with_url_token_only_sends_nothing(self):
         with open(os.path.join(self.cfg, "settings.agent-monitor-plugin.json"), "w") as f:
             json.dump({"url": self.server.url, "token": self.token, "version": "1.0.0"}, f)
         self.run_session()
         self.settle()
-        self.assertIn("prompt", self.server.paths())
+        self.assertEqual(self.server.requests, [])
 
 
 class TestGatingFailures(GateCase):

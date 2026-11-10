@@ -569,22 +569,12 @@ REGISTRATION_NOTE = ("openspec-only registration exception: the server rejects s
 def feature_flags(side):
     """Return {'costs': bool, 'openspec': bool}.
 
-    A parseable sidecar with `url` and no `features` key means both on. A missing,
-    unparseable, empty or malformed sidecar means both off: nothing is sent without an explicit opt-in.
+    Only an explicit `features` object turns a feature on (value `true`). A missing, unparseable,
+    empty or features-less sidecar means both off: nothing is sent without an explicit opt-in.
     """
-    if isinstance(side, dict):
-        f = side.get("features")
-        if isinstance(f, dict):
-            return dict((k, f.get(k) is True) for k in FEATURES)
-        if "features" not in side and isinstance(side.get("url"), str) and side["url"]:
-            return dict((k, True) for k in FEATURES)
-    return dict((k, False) for k in FEATURES)
-
-
-def setup_features(side):
-    """Flags `setup` keeps: existing ones, legacy installs stay on, a fresh install starts with both off."""
-    if isinstance(side.get("features"), dict) or side.get("url"):
-        return feature_flags(side)
+    if isinstance(side, dict) and isinstance(side.get("features"), dict):
+        f = side["features"]
+        return dict((k, f.get(k) is True) for k in FEATURES)
     return dict((k, False) for k in FEATURES)
 
 
@@ -1707,7 +1697,7 @@ def do_setup(url, token, force, allow_insecure, out, err, agent=None, environmen
     """agent / environment: None keeps the stored value, "" clears it, otherwise a validated value replaces it."""
     os.makedirs(config_dir(), exist_ok=True)
     side = read_sidecar()
-    feats = setup_features(side)
+    feats = feature_flags(side)
     new = dict((k, side[k]) for k in ("managed_keys", "previous", "env_was_missing") if k in side)
     new.update({"url": url, "token": token, "allow_insecure": bool(allow_insecure), "features": feats})
     keep = side.get("agent_name") if agent is None else agent
