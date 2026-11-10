@@ -252,5 +252,35 @@ class RepoFiles(unittest.TestCase):
             self.assertRegex(u, r"@[0-9a-f]{40}$")
 
 
+class GitleaksAllowlist(unittest.TestCase):
+    def setUp(self):
+        with open(os.path.join(ROOT, ".gitleaks.toml"), "r", encoding="utf-8") as f:
+            self.text = f.read()
+
+    def test_allowlist_only_covers_tests_directory(self):
+        paths = re.findall(r"^\s*paths\s*=\s*\[(.*?)\]", self.text, re.M | re.S)
+        self.assertEqual(len(paths), 1)
+        entries = re.findall(r"'([^']*)'|\"([^\"]*)\"", paths[0])
+        entries = [a or b for a, b in entries]
+        self.assertTrue(entries)
+        for e in entries:
+            self.assertTrue(e.startswith("plugins/agent-monitor-plugin/tests/"), e)
+        self.assertNotIn("regexes", self.text.replace("regexTarget", ""))
+
+    def test_extends_default_rules(self):
+        self.assertRegex(self.text, r"(?m)^useDefault\s*=\s*true")
+
+    def test_toml_parses(self):
+        try:
+            import tomllib
+        except ImportError:
+            self.skipTest("tomllib needs Python 3.11+")
+        with open(os.path.join(ROOT, ".gitleaks.toml"), "rb") as f:
+            data = tomllib.load(f)
+        self.assertTrue(data["extend"]["useDefault"])
+        for e in data["allowlist"]["paths"]:
+            self.assertTrue(e.startswith("plugins/agent-monitor-plugin/tests/"), e)
+
+
 if __name__ == "__main__":
     unittest.main()

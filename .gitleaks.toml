@@ -1,0 +1,12 @@
+# Extend the default gitleaks rules.
+[extend]
+useDefault = true
+
+# The redaction tests intentionally contain fake secrets and a PEM header to prove
+# they get redacted. They are not real credentials. Only the tests directory is
+# allowlisted; nothing else in the repository is.
+[allowlist]
+description = "Fake secrets used as redaction test fixtures"
+paths = [
+  "plugins/agent-monitor-plugin/tests/",
+]
